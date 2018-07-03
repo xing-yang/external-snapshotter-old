@@ -5,16 +5,15 @@ go_library(
     srcs = [
         "expansion_generated.go",
         "volumeattachment.go",
-        "volumesnapshot.go",
-        "volumesnapshotdata.go",
     ],
+    importmap = "k8s.io/kubernetes/vendor/k8s.io/client-go/listers/storage/v1alpha1",
     importpath = "k8s.io/client-go/listers/storage/v1alpha1",
     visibility = ["//visibility:public"],
     deps = [
-        "//vendor/k8s.io/api/storage/v1alpha1:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/api/errors:go_default_library",
-        "//vendor/k8s.io/apimachinery/pkg/labels:go_default_library",
-        "//vendor/k8s.io/client-go/tools/cache:go_default_library",
+        "//staging/src/k8s.io/api/storage/v1alpha1:go_default_library",
+        "//staging/src/k8s.io/apimachinery/pkg/api/errors:go_default_library",
+        "//staging/src/k8s.io/apimachinery/pkg/labels:go_default_library",
+        "//staging/src/k8s.io/client-go/tools/cache:go_default_library",
     ],
 )
 

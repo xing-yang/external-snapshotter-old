@@ -67,11 +67,13 @@ type StorageClass struct {
 	// +optional
 	VolumeBindingMode *VolumeBindingMode `json:"volumeBindingMode,omitempty" protobuf:"bytes,7,opt,name=volumeBindingMode"`
 
-	// Snapshotter is the driver expected to handle this StorageClass.
-	// This is an optionally-prefixed name, like a label key.
-	// For example: "kubernetes.io/gce-pd" or "kubernetes.io/aws-ebs".
-	// This value may not be empty.
-	Snapshotter string `json:"snapshotter" protobuf:"bytes,8,opt,name=snapshotter"`
+	// Restrict the node topologies where volumes can be dynamically provisioned.
+	// Each volume plugin defines its own supported topology specifications.
+	// An empty TopologySelectorTerm list means there is no topology restriction.
+	// This field is alpha-level and is only honored by servers that enable
+	// the DynamicProvisioningScheduling feature.
+	// +optional
+	AllowedTopologies []v1.TopologySelectorTerm `json:"allowedTopologies,omitempty" protobuf:"bytes,8,rep,name=allowedTopologies"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -19,7 +19,3 @@ limitations under the License.
 package v1alpha1
 
 type VolumeAttachmentExpansion interface{}
-
-type VolumeSnapshotExpansion interface{}
-
-type VolumeSnapshotDataExpansion interface{}
