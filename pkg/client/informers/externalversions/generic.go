@@ -21,7 +21,7 @@ package externalversions
 import (
 	"fmt"
 
-	v1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1"
+	v1alpha1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -52,13 +52,13 @@ func (f *genericInformer) Lister() cache.GenericLister {
 // TODO extend this to unknown resources with a client pool
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
-	// Group=volumesnapshot, Version=v1
-	case v1.SchemeGroupVersion.WithResource("snapshotclasses"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1().SnapshotClasses().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("volumesnapshots"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1().VolumeSnapshots().Informer()}, nil
-	case v1.SchemeGroupVersion.WithResource("volumesnapshotdatas"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1().VolumeSnapshotDatas().Informer()}, nil
+	// Group=volumesnapshot, Version=v1alpha1
+	case v1alpha1.SchemeGroupVersion.WithResource("snapshotclasses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1alpha1().SnapshotClasses().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("volumesnapshots"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1alpha1().VolumeSnapshots().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("volumesnapshotdatas"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Volumesnapshot().V1alpha1().VolumeSnapshotDatas().Informer()}, nil
 
 	}
 

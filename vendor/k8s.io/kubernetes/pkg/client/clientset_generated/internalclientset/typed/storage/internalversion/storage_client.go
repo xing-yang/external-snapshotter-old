@@ -27,8 +27,6 @@ type StorageInterface interface {
 	RESTClient() rest.Interface
 	StorageClassesGetter
 	VolumeAttachmentsGetter
-	VolumeSnapshotsGetter
-	VolumeSnapshotDatasGetter
 }
 
 // StorageClient is used to interact with features provided by the storage.k8s.io group.
@@ -42,14 +40,6 @@ func (c *StorageClient) StorageClasses() StorageClassInterface {
 
 func (c *StorageClient) VolumeAttachments() VolumeAttachmentInterface {
 	return newVolumeAttachments(c)
-}
-
-func (c *StorageClient) VolumeSnapshots(namespace string) VolumeSnapshotInterface {
-	return newVolumeSnapshots(c, namespace)
-}
-
-func (c *StorageClient) VolumeSnapshotDatas() VolumeSnapshotDataInterface {
-	return newVolumeSnapshotDatas(c)
 }
 
 // NewForConfig creates a new StorageClient for the given config.

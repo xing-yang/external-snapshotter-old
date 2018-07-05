@@ -56,9 +56,6 @@ func validNewStorageClass(name string) *storageapi.StorageClass {
 		},
 		ReclaimPolicy:     &deleteReclaimPolicy,
 		VolumeBindingMode: &bindingMode,
-		SnapshotParameters: map[string]string{
-			"foo": "bar",
-		},
 	}
 }
 

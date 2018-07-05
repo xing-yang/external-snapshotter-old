@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
-	storage "k8s.io/api/storage/v1alpha1"
+        crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/api/core/v1"
 	ref "k8s.io/client-go/tools/reference"
@@ -52,13 +52,13 @@ type CSIConnection interface {
 	SupportsControllerListSnapshots(ctx context.Context) (bool, error)
 
 	// CreateSnapshot creates a snapshot for a volume
-	CreateSnapshot(ctx context.Context, snapshot *storage.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*storage.VolumeSnapshotData, error)
+	CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error)
 
 	// DeleteSnapshot deletes a snapshot from a volume
 	DeleteSnapshot(ctx context.Context, snapshotID string) (err error)
 
 	// ListSnapshots lists snapshot from a volume
-	ListSnapshots(ctx context.Context, snapshotID string) (*storage.VolumeSnapshotDataCondition, error)
+	ListSnapshots(ctx context.Context, snapshotID string) (*crdv1.VolumeSnapshotCondition, error)
 
 	// Probe checks that the CSI driver is ready to process requests
 	Probe(ctx context.Context) error
@@ -193,7 +193,7 @@ func (c *csiConnection) SupportsControllerListSnapshots(ctx context.Context) (bo
 	return false, nil
 }
 
-func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *storage.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*storage.VolumeSnapshotData, error) {
+func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error) {
 	if volume.Spec.CSI == nil {
 		return nil, fmt.Errorf("CSIPersistentVolumeSource not defined in spec")
 	}
@@ -229,23 +229,23 @@ func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *storage.Vo
 	}
 
 	// Create VolumeSnapshot in the database
-	snapshotData := &storage.VolumeSnapshotData{
+	snapshotData := &crdv1.VolumeSnapshotData{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: snapDataName,
 		},
-		Spec: storage.VolumeSnapshotDataSpec{
+		Spec: crdv1.VolumeSnapshotDataSpec{
 			VolumeSnapshotRef:   volumeSnapshotRef,
 			PersistentVolumeRef: persistentVolumeRef,
-			VolumeSnapshotDataSource: storage.VolumeSnapshotDataSource{
-				CSISnapshot: &storage.CSIVolumeSnapshotSource{
+			VolumeSnapshotSource: crdv1.VolumeSnapshotSource{
+				CSI: &crdv1.CSIVolumeSnapshotSource{
 					Driver:         driverName,
 					SnapshotHandle: rsp.Snapshot.Id,
 					CreatedAt:      rsp.Snapshot.CreatedAt,
 				},
 			},
 		},
-		Status: storage.VolumeSnapshotDataStatus{
-			Conditions: []storage.VolumeSnapshotDataCondition{
+		Status: crdv1.VolumeSnapshotStatus{
+			Conditions: []crdv1.VolumeSnapshotCondition{
 				ConvertSnapshotStatus(rsp.Snapshot.Status),
 			},
 		},
@@ -269,7 +269,7 @@ func (c *csiConnection) DeleteSnapshot(ctx context.Context, snapshotID string) (
 	return nil
 }
 
-func (c *csiConnection) ListSnapshots(ctx context.Context, snapshotID string) (*storage.VolumeSnapshotDataCondition, error) {
+func (c *csiConnection) ListSnapshots(ctx context.Context, snapshotID string) (*crdv1.VolumeSnapshotCondition, error) {
 	client := csi.NewControllerClient(c.conn)
 
 	req := csi.ListSnapshotsRequest{

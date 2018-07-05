@@ -12,7 +12,6 @@ go_library(
         "trieval.go",
     ],
     cgo = True,
-    importmap = "k8s.io/kubernetes/vendor/golang.org/x/text/cases",
     importpath = "golang.org/x/text/cases",
     visibility = ["//visibility:public"],
     deps = [

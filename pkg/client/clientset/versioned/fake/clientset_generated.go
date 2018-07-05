@@ -20,8 +20,8 @@ package fake
 
 import (
 	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
-	volumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned/typed/volumesnapshot/v1"
-	fakevolumesnapshotv1 "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned/typed/volumesnapshot/v1/fake"
+	volumesnapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned/typed/volumesnapshot/v1alpha1"
+	fakevolumesnapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned/typed/volumesnapshot/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -71,12 +71,12 @@ func (c *Clientset) Discovery() discovery.DiscoveryInterface {
 
 var _ clientset.Interface = &Clientset{}
 
-// VolumesnapshotV1 retrieves the VolumesnapshotV1Client
-func (c *Clientset) VolumesnapshotV1() volumesnapshotv1.VolumesnapshotV1Interface {
-	return &fakevolumesnapshotv1.FakeVolumesnapshotV1{Fake: &c.Fake}
+// VolumesnapshotV1alpha1 retrieves the VolumesnapshotV1alpha1Client
+func (c *Clientset) VolumesnapshotV1alpha1() volumesnapshotv1alpha1.VolumesnapshotV1alpha1Interface {
+	return &fakevolumesnapshotv1alpha1.FakeVolumesnapshotV1alpha1{Fake: &c.Fake}
 }
 
-// Volumesnapshot retrieves the VolumesnapshotV1Client
-func (c *Clientset) Volumesnapshot() volumesnapshotv1.VolumesnapshotV1Interface {
-	return &fakevolumesnapshotv1.FakeVolumesnapshotV1{Fake: &c.Fake}
+// Volumesnapshot retrieves the VolumesnapshotV1alpha1Client
+func (c *Clientset) Volumesnapshot() volumesnapshotv1alpha1.VolumesnapshotV1alpha1Interface {
+	return &fakevolumesnapshotv1alpha1.FakeVolumesnapshotV1alpha1{Fake: &c.Fake}
 }

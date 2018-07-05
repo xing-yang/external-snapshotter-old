@@ -14,7 +14,6 @@ go_library(
         "transformer.go",
         "trieval.go",
     ],
-    importmap = "k8s.io/kubernetes/vendor/golang.org/x/text/secure/precis",
     importpath = "golang.org/x/text/secure/precis",
     visibility = ["//visibility:public"],
     deps = [
