@@ -31,9 +31,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/controller"
 
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
         crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
         clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
 	informers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions"
@@ -63,7 +65,7 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-         vs := &crdv1.VolumeSnapshot{
+        vs := &crdv1.VolumeSnapshot{
                 ObjectMeta: metav1.ObjectMeta{
                         Namespace:"kk",
                         Name: "test",
@@ -106,6 +108,32 @@ func main() {
         }
 
 	factory := informers.NewSharedInformerFactory(snapClient, *resync)
+
+	// Create CRD resource
+	//===============================================================
+        aeclientset, err := apiextensionsclient.NewForConfig(config)
+        if err != nil {
+                panic(err)
+        }
+
+        // initialize CRD resource if it does not exist
+        err = snapshotcrd.CreateCRD(aeclientset)
+        if err != nil {
+                panic(err)
+        }
+
+        // make a new config for our extension's API group, using the first config as a baseline
+        crdClient, _, err := snapshotcrd.NewClient(config)
+        if err != nil {
+                panic(err)
+        }
+
+        // wait until CRD gets processed
+        err = snapshotcrd.WaitForSnapshotResource(crdClient)
+        if err != nil {
+                panic(err)
+        }
+	//===============================================================
 
 	// Connect to CSI.
 	csiConn, err := connection.New(*csiAddress, *connectionTimeout)
