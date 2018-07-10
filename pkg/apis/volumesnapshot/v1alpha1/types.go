@@ -87,6 +87,7 @@ type VolumeSnapshotCondition struct {
 // the VolumeSnapshotSpec
 type VolumeSnapshot struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec represents the desired state of the snapshot
@@ -103,7 +104,9 @@ type VolumeSnapshot struct {
 // VolumeSnapshotList is a list of VolumeSnapshot objects
 type VolumeSnapshotList struct {
 	metav1.TypeMeta `json:",inline"`
-	Metadata        metav1.ListMeta  `json:"metadata"`
+	// +optional
+	metav1.ListMeta  `json:"metadata"`
+
 	Items           []VolumeSnapshot `json:"items"`
 }
 
@@ -182,7 +185,9 @@ type VolumeSnapshotData struct {
 // VolumeSnapshotDataList is a list of VolumeSnapshotData objects
 type VolumeSnapshotDataList struct {
         metav1.TypeMeta `json:",inline"`
-        Metadata        metav1.ListMeta      `json:"metadata"`
+	// +optional
+        metav1.ListMeta `json:"metadata"`
+
         Items           []VolumeSnapshotData `json:"items"`
 }
 
