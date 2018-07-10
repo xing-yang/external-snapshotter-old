@@ -14,19 +14,17 @@ limitations under the License.
 package snapshotcrd
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
 	"github.com/golang/glog"
-	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	snapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -34,106 +32,97 @@ const (
 	SnapshotPVCAnnotation = "snapshot.alpha.kubernetes.io/snapshot"
 )
 
-// NewClient creates a new RESTClient
-func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
-	scheme := runtime.NewScheme()
-	if err := crdv1.AddToScheme(scheme); err != nil {
-		return nil, nil, err
+func CreateAndWaitForSnapshotCRD(clientset apiextensionsclient.Interface) error {
+	crds := []struct {
+		name   string
+		plural string
+		kind   string
+		scope  apiextensionsv1beta1.ResourceScope
+	}{
+		{
+			name:   snapshotv1alpha1.VolumeSnapshotResourcePlural + "." + snapshotv1alpha1.GroupName,
+			plural: snapshotv1alpha1.VolumeSnapshotResourcePlural,
+			kind:   reflect.TypeOf(snapshotv1alpha1.VolumeSnapshot{}).Name(),
+			scope:  apiextensionsv1beta1.NamespaceScoped,
+		},
+		{
+			name:   snapshotv1alpha1.VolumeSnapshotDataResourcePlural + "." + snapshotv1alpha1.GroupName,
+			plural: snapshotv1alpha1.VolumeSnapshotDataResourcePlural,
+			kind:   reflect.TypeOf(snapshotv1alpha1.VolumeSnapshotData{}).Name(),
+			scope:  apiextensionsv1beta1.ClusterScoped,
+		},
+		{
+			name:   snapshotv1alpha1.SnapshotClassResourcePlural + "." + snapshotv1alpha1.GroupName,
+			plural: snapshotv1alpha1.SnapshotClassResourcePlural,
+			kind:   reflect.TypeOf(snapshotv1alpha1.SnapshotClass{}).Name(),
+			scope:  apiextensionsv1beta1.ClusterScoped,
+		},
 	}
 
-	config := *cfg
-	config.GroupVersion = &crdv1.SchemeGroupVersion
-	config.APIPath = "/apis"
-	config.ContentType = runtime.ContentTypeJSON
-	config.NegotiatedSerializer = serializer.DirectCodecFactory{CodecFactory: serializer.NewCodecFactory(scheme)}
-
-	client, err := rest.RESTClientFor(&config)
-	if err != nil {
-		return nil, nil, err
+	for _, crd := range crds {
+		// initialize CRD resource if it does not exist
+		err := CreateCRD(clientset, crd.name, crd.plural, crd.kind, crd.scope)
+		if err != nil {
+			return err
+		}
 	}
 
-	return client, scheme, nil
+	for _, crd := range crds {
+		// wait until CRD gets processed
+		err := WaitForSnapshotResource(clientset, crd.plural)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // CreateCRD creates CustomResourceDefinition
-func CreateCRD(clientset apiextensionsclient.Interface) error {
-        crd := &apiextensionsv1beta1.CustomResourceDefinition{
-                ObjectMeta: metav1.ObjectMeta{
-                        Name: crdv1.SnapshotClassResourcePlural + "." + crdv1.GroupName,
-                },
-                Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-                        Group:   crdv1.GroupName,
-                        Version: crdv1.SchemeGroupVersion.Version,
-                        Scope:   apiextensionsv1beta1.NamespaceScoped,
-                        Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-                                Plural: crdv1.SnapshotClassResourcePlural,
-                                Kind:   reflect.TypeOf(crdv1.SnapshotClass{}).Name(),
-                        },
-                },
-        }
-        res, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
-
-        if err != nil && !apierrors.IsAlreadyExists(err) {
-                glog.Fatalf("failed to create VolumeSnapshotResource: %#v, err: %#v",
-                        res, err)
-        }
-
-	crd = &apiextensionsv1beta1.CustomResourceDefinition{
+func CreateCRD(clientset apiextensionsclient.Interface, name, plural, kind string, scope apiextensionsv1beta1.ResourceScope) error {
+	crd := &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: crdv1.VolumeSnapshotDataResourcePlural + "." + crdv1.GroupName,
+			Name: name,
 		},
 		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   crdv1.GroupName,
-			Version: crdv1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.ClusterScoped,
+			Group:   snapshotv1alpha1.GroupName,
+			Version: snapshotv1alpha1.SchemeGroupVersion.Version,
+			Scope:   scope,
 			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: crdv1.VolumeSnapshotDataResourcePlural,
-				Kind:   reflect.TypeOf(crdv1.VolumeSnapshotData{}).Name(),
+				Plural: plural,
+				Kind:   kind,
 			},
 		},
 	}
-	res, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 
+	_, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 	if err != nil && !apierrors.IsAlreadyExists(err) {
-		glog.Fatalf("failed to create VolumeSnapshotDataResource: %#v, err: %#v",
-			res, err)
-	}
-
-	crd = &apiextensionsv1beta1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: crdv1.VolumeSnapshotResourcePlural + "." + crdv1.GroupName,
-		},
-		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   crdv1.GroupName,
-			Version: crdv1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.NamespaceScoped,
-			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: crdv1.VolumeSnapshotResourcePlural,
-				Kind:   reflect.TypeOf(crdv1.VolumeSnapshot{}).Name(),
-			},
-		},
-	}
-	res, err = clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
-
-	if err != nil && !apierrors.IsAlreadyExists(err) {
-		glog.Fatalf("failed to create VolumeSnapshotResource: %#v, err: %#v",
-			res, err)
+		glog.Errorf("failed to create crd: %s, err: %#v", kind, err)
+		return err
 	}
 
 	return nil
 }
 
 // WaitForSnapshotResource waits for the snapshot resource
-func WaitForSnapshotResource(snapshotClient *rest.RESTClient) error {
+func WaitForSnapshotResource(clientset apiextensionsclient.Interface, crdName string) error {
 	return wait.Poll(100*time.Millisecond, 60*time.Second, func() (bool, error) {
-		_, err := snapshotClient.Get().
-			Resource(crdv1.VolumeSnapshotDataResourcePlural).DoRaw()
-		if err == nil {
-			return true, nil
+		crd, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Get(crdName, metav1.GetOptions{})
+		if err != nil {
+			return false, err
 		}
-		if apierrors.IsNotFound(err) {
-			return false, nil
+		for _, cond := range crd.Status.Conditions {
+			switch cond.Type {
+			case apiextensionsv1beta1.Established:
+				if cond.Status == apiextensionsv1beta1.ConditionTrue {
+					return true, nil
+				}
+			case apiextensionsv1beta1.NamesAccepted:
+				if cond.Status == apiextensionsv1beta1.ConditionFalse {
+					return false, fmt.Errorf("name conflict: %v", cond.Reason)
+				}
+			}
 		}
-		return false, err
+		return false, nil
 	})
 }

@@ -46,8 +46,8 @@ func init() {
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
-                &SnapshotClass{},
-                &SnapshotClassList{},
+		&SnapshotClass{},
+		&SnapshotClassList{},
 		&VolumeSnapshot{},
 		&VolumeSnapshotList{},
 		&VolumeSnapshotData{},

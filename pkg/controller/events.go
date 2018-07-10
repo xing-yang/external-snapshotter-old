@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +k8s:deepcopy-gen=package,register
+package controller
 
-// Package v1alpha1 is the v1alpha1 version of the API.
-// +groupName=volumesnapshot.csi.k8s.io
-package v1alpha1
+const (
+	CreateSnapshotFailed      = "CreateSnapshotFailed"
+	CreateSnapshotSucceeded   = "CreateSnapshotSucceeded"
+	SnapshotDataCleanupFailed = "SnapshotDataCleanupFailed"
+)

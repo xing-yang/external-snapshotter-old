@@ -21,16 +21,16 @@ import (
 	"fmt"
 	"time"
 
+	snapshotv1alpha1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"k8s.io/api/core/v1"
-	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 )
 
 // Handler is responsible for handling VolumeAttachment events from informer.
 type Handler interface {
-	takeSnapshot(snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error)
-	deleteSnapshot(vsd *crdv1.VolumeSnapshotData) error
-	listSnapshots(vsd *crdv1.VolumeSnapshotData) (*crdv1.VolumeSnapshotCondition, error)
+	takeSnapshot(snapshot *snapshotv1alpha1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*snapshotv1alpha1.VolumeSnapshotData, error)
+	deleteSnapshot(vsd *snapshotv1alpha1.VolumeSnapshotData) error
+	listSnapshots(vsd *snapshotv1alpha1.VolumeSnapshotData) (*snapshotv1alpha1.VolumeSnapshotCondition, error)
 }
 
 // csiHandler is a handler that calls CSI to create/delete volume snapshot.
@@ -46,8 +46,8 @@ func NewCSIHandler(csiConnection connection.CSIConnection, timeout time.Duration
 	}
 }
 
-func (handler *csiHandler) takeSnapshot(snapshot *crdv1.VolumeSnapshot,
-	volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error) {
+func (handler *csiHandler) takeSnapshot(snapshot *snapshotv1alpha1.VolumeSnapshot,
+	volume *v1.PersistentVolume, parameters map[string]string) (*snapshotv1alpha1.VolumeSnapshotData, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), handler.timeout)
 	defer cancel()
 
@@ -59,7 +59,7 @@ func (handler *csiHandler) takeSnapshot(snapshot *crdv1.VolumeSnapshot,
 	return snapDataObj, nil
 }
 
-func (handler *csiHandler) deleteSnapshot(vsd *crdv1.VolumeSnapshotData) error {
+func (handler *csiHandler) deleteSnapshot(vsd *snapshotv1alpha1.VolumeSnapshotData) error {
 	if vsd.Spec.CSI == nil {
 		return fmt.Errorf("CSISnapshot not defined in spec")
 	}
@@ -74,7 +74,7 @@ func (handler *csiHandler) deleteSnapshot(vsd *crdv1.VolumeSnapshotData) error {
 	return nil
 }
 
-func (handler *csiHandler) listSnapshots(vsd *crdv1.VolumeSnapshotData) (*crdv1.VolumeSnapshotCondition, error) {
+func (handler *csiHandler) listSnapshots(vsd *snapshotv1alpha1.VolumeSnapshotData) (*snapshotv1alpha1.VolumeSnapshotCondition, error) {
 	if vsd.Spec.CSI == nil {
 		return nil, fmt.Errorf("CSISnapshot not defined in spec")
 	}
