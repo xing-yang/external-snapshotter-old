@@ -224,7 +224,7 @@ func (in *VolumeSnapshotDataCopy) DeepCopy() *VolumeSnapshotDataCopy {
 func (in *VolumeSnapshotDataList) DeepCopyInto(out *VolumeSnapshotDataList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.Metadata = in.Metadata
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]VolumeSnapshotData, len(*in))
@@ -257,7 +257,7 @@ func (in *VolumeSnapshotDataList) DeepCopyObject() runtime.Object {
 func (in *VolumeSnapshotDataListCopy) DeepCopyInto(out *VolumeSnapshotDataListCopy) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.Metadata = in.Metadata
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]VolumeSnapshotData, len(*in))
@@ -309,7 +309,7 @@ func (in *VolumeSnapshotDataSpec) DeepCopy() *VolumeSnapshotDataSpec {
 func (in *VolumeSnapshotList) DeepCopyInto(out *VolumeSnapshotList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.Metadata = in.Metadata
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]VolumeSnapshot, len(*in))
@@ -342,7 +342,7 @@ func (in *VolumeSnapshotList) DeepCopyObject() runtime.Object {
 func (in *VolumeSnapshotListCopy) DeepCopyInto(out *VolumeSnapshotListCopy) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.Metadata = in.Metadata
+	out.ListMeta = in.ListMeta
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]VolumeSnapshot, len(*in))
