@@ -210,11 +210,12 @@ func (ctrl *CSISnapshotController) vsWorker() {
 		}
 		snapshot, err := ctrl.vsLister.VolumeSnapshots(namespace).Get(name)
 		if err == nil {
-			//if ctrl.shouldProcessVS(snapshot) {
-			// The volume snapshot still exists in informer cache, the event must have
-			// been add/update/sync
-			ctrl.updateVs(snapshot)
-			//}
+			if ctrl.shouldProcessVS(snapshot) {
+				// The volume snapshot still exists in informer cache, the event must have
+				// been add/update/sync
+				glog.V(4).Infof("should process snapshot")
+				ctrl.updateVs(snapshot)
+			}
 			return false
 		}
 		if err != nil && !errors.IsNotFound(err) {
@@ -238,9 +239,9 @@ func (ctrl *CSISnapshotController) vsWorker() {
 			glog.Errorf("expected vs, got %+v", vsObj)
 			return false
 		}
-		//if ctrl.shouldProcessVS(snapshot) {
-		ctrl.deleteVS(snapshot)
-		//}
+		if ctrl.shouldProcessVS(snapshot) {
+			ctrl.deleteVS(snapshot)
+		}
 		return false
 	}
 
@@ -311,7 +312,8 @@ func (ctrl *CSISnapshotController) vsdWorker() {
 	}
 }
 
-// shouldProcessVS detect if snapshotter is the same as controller snapshotter.
+// shouldProcessVS detect if snapshotter in the SnapshotClass is the same as the snapshotter
+// in external controller.
 func (ctrl *CSISnapshotController) shouldProcessVS(snapshot *crdv1.VolumeSnapshot) bool {
 	class, err := ctrl.getClassFromVolumeSnapshot(snapshot)
 	if err != nil {
@@ -319,7 +321,7 @@ func (ctrl *CSISnapshotController) shouldProcessVS(snapshot *crdv1.VolumeSnapsho
 	}
         glog.V(5).Infof("SnapshotClass Snapshotter [%s] Snapshot Controller snapshotterName [%s]", class.Snapshotter, ctrl.snapshotterName)
 	if class.Snapshotter != ctrl.snapshotterName {
-		glog.V(4).Infof("Skipping VolumeSnapshot %s for snapshotter %s", vsToVsKey(snapshot), class.Snapshotter)
+		glog.V(4).Infof("Skipping VolumeSnapshot %s for snapshotter [%s] in SnapshotClass because it does not match with the snapshotter for controller [%s]", vsToVsKey(snapshot), class.Snapshotter, ctrl.snapshotterName)
 		return false
 	}
 	return true
