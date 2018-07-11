@@ -20,25 +20,22 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
-	"os/signal"
-	"time"
-        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-        "k8s.io/client-go/tools/cache"
-
 	"github.com/golang/glog"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"os"
+	"os/signal"
+	"time"
 
-	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/controller"
+	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 
+	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
+	snapshotinformers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-        crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
-        clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
-	informers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions"
 )
 
 const (
@@ -47,46 +44,28 @@ const (
 
 	// Default timeout of short CSI calls like GetPluginInfo
 	csiTimeout = time.Second
+
+	// Number of retries when we create a snapshotData object for a created snapshot.
+	DefaultCreateSnapshotDataRetryCount = 5
+
+	// Interval between retries when we create a snapshotData object for a created snapshot.
+	DefaultcreateSnapshotDataInterval = 10 * time.Second
 )
 
 // Command line flags
 var (
 	snapshotter                  = flag.String("snapshotter", "", "Name of the snapshotter. The snapshotter will only create snapshot data for snapshot that request a StorageClass with a snapshotter field set equal to this name.")
 	kubeconfig                   = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
-	resync                       = flag.Duration("resync", 10*time.Second, "Resync interval of the controller.")
 	connectionTimeout            = flag.Duration("connection-timeout", 1*time.Minute, "Timeout for waiting for CSI driver socket.")
 	csiAddress                   = flag.String("csi-address", "/run/csi/socket", "Address of the CSI driver socket.")
-	createSnapshotDataRetryCount = flag.Int("createSnapshotDataRetryCount", 5, "Number of retries when we create a snapshot data object for a snapshot.")
-	createSnapshotDataInterval   = flag.Duration("createSnapshotDataInterval", 10*time.Second, "Interval between retries when we create a snapshot data object for a snapshot.")
+	createSnapshotDataRetryCount = flag.Int("createSnapshotDataRetryCount", DefaultCreateSnapshotDataRetryCount, "Number of retries when we create a snapshot data object for a snapshot.")
+	createSnapshotDataInterval   = flag.Duration("createSnapshotDataInterval", DefaultcreateSnapshotDataInterval, "Interval between retries when we create a snapshot data object for a snapshot.")
 	resyncPeriod                 = flag.Duration("resyncPeriod", 60*time.Second, "The period that should be used to re-sync the snapshot.")
 )
 
 func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
-
-        vs := &crdv1.VolumeSnapshot{
-                ObjectMeta: metav1.ObjectMeta{
-                        Namespace:"kk",
-                        Name: "test",
-		        SelfLink:"/apis/csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
-			UID:"046722da-6084-11e8-aa97-fa163ec505d6",
-			ResourceVersion:"514",
-			CreationTimestamp:metav1.Now(),
-                },
-                Spec: crdv1.VolumeSnapshotSpec{
-                        PersistentVolumeClaimName: "testpvc",
-                },
-        }
-
-        key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(vs)
-        if err != nil {
-		glog.Error(err.Error())
-        }
-
-        glog.Info(key)
-        glog.Info(vs)
-
 
 	// Create the client config. Use kubeconfig if given, otherwise assume in-cluster.
 	config, err := buildConfig(*kubeconfig)
@@ -95,45 +74,32 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create CRD resource
+	//===============================================================
+	aeclientset, err := apiextensionsclient.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	err = snapshotcrd.CreateAndWaitForSnapshotCRD(aeclientset)
+	if err != nil {
+		panic(err)
+	}
+	//===============================================================
+
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Error(err.Error())
 		os.Exit(1)
 	}
+	factory := informers.NewSharedInformerFactory(kubeClient, *resyncPeriod)
 
-        snapClient, err := clientset.NewForConfig(config)
-        if err != nil {
-                glog.Errorf("Error building snapshot clientset: %s", err.Error())
+	snapClient, err := clientset.NewForConfig(config)
+	if err != nil {
+		glog.Errorf("Error building snapshot clientset: %s", err.Error())
 		os.Exit(1)
-        }
-
-	factory := informers.NewSharedInformerFactory(snapClient, *resync)
-
-	// Create CRD resource
-	//===============================================================
-        aeclientset, err := apiextensionsclient.NewForConfig(config)
-        if err != nil {
-                panic(err)
-        }
-
-        // initialize CRD resource if it does not exist
-        err = snapshotcrd.CreateCRD(aeclientset)
-        if err != nil {
-                panic(err)
-        }
-
-        // make a new config for our extension's API group, using the first config as a baseline
-        crdClient, _, err := snapshotcrd.NewClient(config)
-        if err != nil {
-                panic(err)
-        }
-
-        // wait until CRD gets processed
-        err = snapshotcrd.WaitForSnapshotResource(crdClient)
-        if err != nil {
-                panic(err)
-        }
-	//===============================================================
+	}
+	snapshotFactory := snapshotinformers.NewSharedInformerFactory(snapClient, *resyncPeriod)
 
 	// Connect to CSI.
 	csiConn, err := connection.New(*csiAddress, *connectionTimeout)
@@ -163,18 +129,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	ctrl := controller.NewCSISnapshotController(
-		snapClient,
-		kubeClient,
-		*snapshotter,
-                factory.Volumesnapshot().V1alpha1().VolumeSnapshots(),
-		factory.Volumesnapshot().V1alpha1().VolumeSnapshotDatas(),
-		*createSnapshotDataRetryCount,
-		*createSnapshotDataInterval,
-		csiConn,
-		*connectionTimeout,
-		*resyncPeriod,
-	)
+	params := controller.ControllerParameters{
+		KubeClient:                   kubeClient,
+		SnapshotClient:               snapClient,
+		Handler:                      controller.NewCSIHandler(csiConn, *connectionTimeout),
+		Snapshotter:                  *snapshotter,
+		CreateSnapshotDataRetryCount: *createSnapshotDataRetryCount,
+		CreateSnapshotDataInterval:   *createSnapshotDataInterval,
+		VolumeInformer:               factory.Core().V1().PersistentVolumes(),
+		ClaimInformer:                factory.Core().V1().PersistentVolumeClaims(),
+		VolumeSnapshotInformer:       snapshotFactory.Volumesnapshot().V1alpha1().VolumeSnapshots(),
+		VolumeSnapshotDataInformer:   snapshotFactory.Volumesnapshot().V1alpha1().VolumeSnapshotDatas(),
+		SnapshotClassInformer:        snapshotFactory.Volumesnapshot().V1alpha1().SnapshotClasses(),
+	}
+
+	ctrl := controller.NewCSISnapshotController(params)
 
 	// run...
 	stopCh := make(chan struct{})

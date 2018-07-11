@@ -17,11 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"encoding/json"
-
-	core_v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 const (
@@ -29,7 +26,7 @@ const (
 	VolumeSnapshotDataResourcePlural = "volumesnapshotdatas"
 	// VolumeSnapshotResourcePlural is "volumesnapshots"
 	VolumeSnapshotResourcePlural = "volumesnapshots"
-	// SnapshotClassResourcePlural is "snapshotclasss"
+	// SnapshotClassResourcePlural is "snapshotclasses"
 	SnapshotClassResourcePlural = "snapshotclasses"
 )
 
@@ -48,14 +45,14 @@ type VolumeSnapshotConditionType string
 
 // These are valid conditions of a volume snapshot.
 const (
-        // VolumeSnapshotConditionCreating means the snapshot is being created but
-        // it is not cut yet.
-        VolumeSnapshotConditionCreating VolumeSnapshotConditionType = "Creating"
-        // VolumeSnapshotConditionUploading means the snapshot is cut and the application
-        // can resume accessing data if ConditionStatus is True. It corresponds
-        // to "Uploading" in GCE PD or "Pending" in AWS and ConditionStatus is True.
-        // This condition type is not applicable in OpenStack Cinder.
-        VolumeSnapshotConditionUploading VolumeSnapshotConditionType = "Uploading"
+	// VolumeSnapshotConditionCreating means the snapshot is being created but
+	// it is not cut yet.
+	VolumeSnapshotConditionCreating VolumeSnapshotConditionType = "Creating"
+	// VolumeSnapshotConditionUploading means the snapshot is cut and the application
+	// can resume accessing data if ConditionStatus is True. It corresponds
+	// to "Uploading" in GCE PD or "Pending" in AWS and ConditionStatus is True.
+	// This condition type is not applicable in OpenStack Cinder.
+	VolumeSnapshotConditionUploading VolumeSnapshotConditionType = "Uploading"
 	// VolumeSnapshotConditionReady is added when the snapshot has been successfully created and is ready to be used.
 	VolumeSnapshotConditionReady VolumeSnapshotConditionType = "Ready"
 	// VolumeSnapshotConditionError means an error occurred during snapshot creation.
@@ -67,7 +64,7 @@ type VolumeSnapshotCondition struct {
 	// Type of replication controller condition.
 	Type VolumeSnapshotConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=VolumeSnapshotConditionType"`
 	// Status of the condition, one of True, False, Unknown.
-	Status core_v1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
+	Status v1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=ConditionStatus"`
 	// The last time the condition transitioned from one status to another.
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime" protobuf:"bytes,3,opt,name=lastTransitionTime"`
@@ -105,9 +102,9 @@ type VolumeSnapshot struct {
 type VolumeSnapshotList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ListMeta  `json:"metadata"`
+	metav1.ListMeta `json:"metadata"`
 
-	Items           []VolumeSnapshot `json:"items"`
+	Items []VolumeSnapshot `json:"items"`
 }
 
 // VolumeSnapshotSpec is the desired state of the volume snapshot
@@ -120,9 +117,9 @@ type VolumeSnapshotSpec struct {
 	// +optional
 	SnapshotDataName string `json:"snapshotDataName" protobuf:"bytes,2,opt,name=snapshotDataName"`
 
-        // Name of the SnapshotClass required by the volume snapshot.
-        // +optional
-        SnapshotClassName string `json:"storageClassName" protobuf:"bytes,3,opt,name=storageClassName"`
+	// Name of the SnapshotClass required by the volume snapshot.
+	// +optional
+	SnapshotClassName string `json:"storageClassName" protobuf:"bytes,3,opt,name=storageClassName"`
 }
 
 // +genclient
@@ -130,35 +127,35 @@ type VolumeSnapshotSpec struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type SnapshotClass struct {
-        metav1.TypeMeta `json:",inline"`
-        // +optional
-        metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-        // Snapshotter is the driver expected to handle this SnapshotClass.
-        // This value may not be empty.
-        Snapshotter string
+	// Snapshotter is the driver expected to handle this SnapshotClass.
+	// This value may not be empty.
+	Snapshotter string
 
-        // Parameters holds parameters for the snapshotter.
-        // These values are opaque to the system and are passed directly
-        // to the snapshotter. The only validation done on keys is that they are
-        // not empty. The maximum number of parameters is
-        // 512, with a cumulative max size of 256K
-        // +optional
-        Parameters map[string]string
+	// Parameters holds parameters for the snapshotter.
+	// These values are opaque to the system and are passed directly
+	// to the snapshotter. The only validation done on keys is that they are
+	// not empty. The maximum number of parameters is
+	// 512, with a cumulative max size of 256K
+	// +optional
+	Parameters map[string]string
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SnapshotClassList is a collection of snapshot classes.
 type SnapshotClassList struct {
-        metav1.TypeMeta
-        // Standard list metadata
-        // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
-        // +optional
-        metav1.ListMeta
+	metav1.TypeMeta
+	// Standard list metadata
+	// More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
+	// +optional
+	metav1.ListMeta
 
-        // Items is the list of SnapshotClasses
-        Items []SnapshotClass
+	// Items is the list of SnapshotClasses
+	Items []SnapshotClass
 }
 
 // +genclient
@@ -184,11 +181,11 @@ type VolumeSnapshotData struct {
 
 // VolumeSnapshotDataList is a list of VolumeSnapshotData objects
 type VolumeSnapshotDataList struct {
-        metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
 	// +optional
-        metav1.ListMeta `json:"metadata"`
+	metav1.ListMeta `json:"metadata"`
 
-        Items           []VolumeSnapshotData `json:"items"`
+	Items []VolumeSnapshotData `json:"items"`
 }
 
 // VolumeSnapshotDataSpec is the spec of the volume snapshot data
@@ -199,136 +196,36 @@ type VolumeSnapshotDataSpec struct {
 	// VolumeSnapshotRef is part of bi-directional binding between VolumeSnapshot
 	// and VolumeSnapshotData
 	// +optional
-	VolumeSnapshotRef *core_v1.ObjectReference `json:"volumeSnapshotRef" protobuf:"bytes,2,opt,name=volumeSnapshotRef"`
+	VolumeSnapshotRef *v1.ObjectReference `json:"volumeSnapshotRef" protobuf:"bytes,2,opt,name=volumeSnapshotRef"`
 
 	// PersistentVolumeRef represents the PersistentVolume that the snapshot has been
 	// taken from
 	// +optional
-	PersistentVolumeRef *core_v1.ObjectReference `json:"persistentVolumeRef" protobuf:"bytes,3,opt,name=persistentVolumeRef"`
+	PersistentVolumeRef *v1.ObjectReference `json:"persistentVolumeRef" protobuf:"bytes,3,opt,name=persistentVolumeRef"`
 }
 
 // VolumeSnapshotSource represents the actual location and type of the snapshot. Only one of its members may be specified.
 type VolumeSnapshotSource struct {
-        // CSI (Container Storage Interface) represents storage that handled by an external CSI Volume Driver (Alpha feature).
-        // +optional
-        CSI *CSIVolumeSnapshotSource `json:"csiVolumeSnapshotSource,omitempty"`
+	// CSI (Container Storage Interface) represents storage that handled by an external CSI Volume Driver (Alpha feature).
+	// +optional
+	CSI *CSIVolumeSnapshotSource `json:"csiVolumeSnapshotSource,omitempty"`
 }
 
 // Represents the source from CSI volume snapshot
 type CSIVolumeSnapshotSource struct {
-        // Driver is the name of the driver to use for this snapshot.
-        // Required.
-        Driver string `json:"driver"`
+	// Driver is the name of the driver to use for this snapshot.
+	// Required.
+	Driver string `json:"driver"`
 
-        // SnapshotHandle is the unique snapshot id returned by the CSI volume
-        // plugin’s CreateSnapshot to refer to the snapshot on all subsequent calls.
-        // Required.
-        SnapshotHandle string `json:"snapshotHandle"`
+	// SnapshotHandle is the unique snapshot id returned by the CSI volume
+	// plugin’s CreateSnapshot to refer to the snapshot on all subsequent calls.
+	// Required.
+	SnapshotHandle string `json:"snapshotHandle"`
 
-        // Timestamp when the point-in-time snapshot is taken on the storage
-        // system. The format of this field should be a Unix nanoseconds time
-        // encoded as an int64. On Unix, the command `date +%s%N` returns
-        // the  current time in nanoseconds since 1970-01-01 00:00:00 UTC.
-        // This field is REQUIRED.
-        CreatedAt int64 `json:"createdAt,omitempty" protobuf:"varint,2,opt,name=createdAt"`
-}
-
-// GetObjectKind is required to satisfy Object interface
-func (v *VolumeSnapshotData) GetObjectKind() schema.ObjectKind {
-	return &v.TypeMeta
-}
-
-// GetObjectMeta is required to satisfy ObjectMetaAccessor interface
-func (v *VolumeSnapshotData) GetObjectMeta() metav1.Object {
-	return &v.ObjectMeta
-}
-
-// GetObjectKind is required to satisfy Object interface
-func (vd *VolumeSnapshotDataList) GetObjectKind() schema.ObjectKind {
-	return &vd.TypeMeta
-}
-
-// GetListMeta is required to satisfy ListMetaAccessor interface
-//func (vd *VolumeSnapshotDataList) GetListMeta() metav1.ListInterface {
-//	return &vd.ListMeta
-//}
-
-// GetObjectKind is required to satisfy Object interface
-func (v *VolumeSnapshot) GetObjectKind() schema.ObjectKind {
-	return &v.TypeMeta
-}
-
-// GetObjectMeta is required to satisfy ObjectMetaAccessor interface
-func (v *VolumeSnapshot) GetObjectMeta() metav1.Object {
-	return &v.ObjectMeta
-}
-
-// GetObjectKind is required to satisfy Object interface
-func (vd *VolumeSnapshotList) GetObjectKind() schema.ObjectKind {
-	return &vd.TypeMeta
-}
-
-// GetListMeta is required to satisfy ListMetaAccessor interface
-//func (vd *VolumeSnapshotList) GetListMeta() metav1.ListInterface {
-//	return &vd.ListMeta
-//}
-
-// VolumeSnapshotDataListCopy is a VolumeSnapshotDataList type
-type VolumeSnapshotDataListCopy VolumeSnapshotDataList
-
-// VolumeSnapshotDataCopy is a VolumeSnapshotData type
-type VolumeSnapshotDataCopy VolumeSnapshotData
-
-// VolumeSnapshotListCopy is a VolumeSnapshotList type
-type VolumeSnapshotListCopy VolumeSnapshotList
-
-// VolumeSnapshotCopy is a VolumeSnapshot type
-type VolumeSnapshotCopy VolumeSnapshot
-
-// UnmarshalJSON unmarshalls json data
-func (v *VolumeSnapshot) UnmarshalJSON(data []byte) error {
-	tmp := VolumeSnapshotCopy{}
-	err := json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-	tmp2 := VolumeSnapshot(tmp)
-	*v = tmp2
-	return nil
-}
-
-// UnmarshalJSON unmarshals json data
-func (vd *VolumeSnapshotList) UnmarshalJSON(data []byte) error {
-	tmp := VolumeSnapshotListCopy{}
-	err := json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-	tmp2 := VolumeSnapshotList(tmp)
-	*vd = tmp2
-	return nil
-}
-
-// UnmarshalJSON unmarshals json data
-func (v *VolumeSnapshotData) UnmarshalJSON(data []byte) error {
-	tmp := VolumeSnapshotDataCopy{}
-	err := json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-	tmp2 := VolumeSnapshotData(tmp)
-	*v = tmp2
-	return nil
-}
-
-// UnmarshalJSON unmarshals json data
-func (vd *VolumeSnapshotDataList) UnmarshalJSON(data []byte) error {
-	tmp := VolumeSnapshotDataListCopy{}
-	err := json.Unmarshal(data, &tmp)
-	if err != nil {
-		return err
-	}
-	tmp2 := VolumeSnapshotDataList(tmp)
-	*vd = tmp2
-	return nil
+	// Timestamp when the point-in-time snapshot is taken on the storage
+	// system. The format of this field should be a Unix nanoseconds time
+	// encoded as an int64. On Unix, the command `date +%s%N` returns
+	// the  current time in nanoseconds since 1970-01-01 00:00:00 UTC.
+	// This field is REQUIRED.
+	CreatedAt int64 `json:"createdAt,omitempty" protobuf:"varint,2,opt,name=createdAt"`
 }
