@@ -87,8 +87,10 @@ type VolumeSnapshotCondition struct {
 // the VolumeSnapshotSpec
 type VolumeSnapshot struct {
 	metav1.TypeMeta `json:",inline"`
+        // Standard object's metadata.
+        // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec represents the desired state of the snapshot
 	// +optional
@@ -96,7 +98,7 @@ type VolumeSnapshot struct {
 
 	// Status represents the latest observer state of the snapshot
 	// +optional
-	Status VolumeSnapshotStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
+	Status VolumeSnapshotStatus `json:"status,omitempty" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -105,9 +107,9 @@ type VolumeSnapshot struct {
 type VolumeSnapshotList struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
-	metav1.ListMeta  `json:"metadata"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	Items           []VolumeSnapshot `json:"items"`
+	Items           []VolumeSnapshot `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // VolumeSnapshotSpec is the desired state of the volume snapshot
@@ -122,43 +124,47 @@ type VolumeSnapshotSpec struct {
 
         // Name of the SnapshotClass required by the volume snapshot.
         // +optional
-        SnapshotClassName string `json:"storageClassName" protobuf:"bytes,3,opt,name=storageClassName"`
+        SnapshotClassName string `json:"snapshotClassName" protobuf:"bytes,3,opt,name=snapshotClassName"`
 }
 
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// SnapshotClass describes the parameters used by storage system when
+// provisioning VolumeSnapshots from PVCs.
+//
+// SnapshotClasses are non-namespaced; the name of the snapshot class
+// according to etcd is in ObjectMeta.Name.
 type SnapshotClass struct {
         metav1.TypeMeta `json:",inline"`
+        // Standard object's metadata.
+        // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
         // +optional
-        metav1.ObjectMeta `json:"metadata,omitempty"`
+        metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
         // Snapshotter is the driver expected to handle this SnapshotClass.
-        // This value may not be empty.
-        Snapshotter string
+        Snapshotter string `json:"snapshotter" protobuf:"bytes,2,opt,name=snapshotter"`
 
         // Parameters holds parameters for the snapshotter.
         // These values are opaque to the system and are passed directly
-        // to the snapshotter. The only validation done on keys is that they are
-        // not empty. The maximum number of parameters is
-        // 512, with a cumulative max size of 256K
+        // to the snapshotter.
         // +optional
-        Parameters map[string]string
+        Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // SnapshotClassList is a collection of snapshot classes.
 type SnapshotClassList struct {
-        metav1.TypeMeta
+        metav1.TypeMeta `json:",inline"`
         // Standard list metadata
         // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
         // +optional
-        metav1.ListMeta
+        metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
         // Items is the list of SnapshotClasses
-        Items []SnapshotClass
+        Items []SnapshotClass `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // +genclient
@@ -168,16 +174,14 @@ type SnapshotClassList struct {
 // VolumeSnapshotData represents the actual "on-disk" snapshot object
 type VolumeSnapshotData struct {
 	metav1.TypeMeta `json:",inline"`
+        // Standard object's metadata.
+        // More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata
 	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
 	// Spec represents the desired state of the snapshot
 	// +optional
 	Spec VolumeSnapshotDataSpec `json:"spec" protobuf:"bytes,2,opt,name=spec"`
-
-	// Status represents the latest observer state of the snapshot
-	// +optional
-	Status VolumeSnapshotStatus `json:"status" protobuf:"bytes,3,opt,name=status"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -186,9 +190,9 @@ type VolumeSnapshotData struct {
 type VolumeSnapshotDataList struct {
         metav1.TypeMeta `json:",inline"`
 	// +optional
-        metav1.ListMeta `json:"metadata"`
+        metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-        Items           []VolumeSnapshotData `json:"items"`
+        Items           []VolumeSnapshotData `json:"items" protobuf:"bytes,2,rep,name=items"`
 }
 
 // VolumeSnapshotDataSpec is the spec of the volume snapshot data

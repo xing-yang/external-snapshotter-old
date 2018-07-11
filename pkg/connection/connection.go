@@ -52,7 +52,7 @@ type CSIConnection interface {
 	SupportsControllerListSnapshots(ctx context.Context) (bool, error)
 
 	// CreateSnapshot creates a snapshot for a volume
-	CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error)
+	CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, *crdv1.VolumeSnapshotStatus, error)
 
 	// DeleteSnapshot deletes a snapshot from a volume
 	DeleteSnapshot(ctx context.Context, snapshotID string) (err error)
@@ -193,16 +193,17 @@ func (c *csiConnection) SupportsControllerListSnapshots(ctx context.Context) (bo
 	return false, nil
 }
 
-func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error) {
+func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, *crdv1.VolumeSnapshotStatus, error) {
+	glog.V(5).Infof("CSI CreateSnapshot: %s", snapshot.Name)
 	if volume.Spec.CSI == nil {
-		return nil, fmt.Errorf("CSIPersistentVolumeSource not defined in spec")
+		return nil, nil, fmt.Errorf("CSIPersistentVolumeSource not defined in spec")
 	}
 
 	client := csi.NewControllerClient(c.conn)
 
 	driverName, err := c.GetDriverName(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	req := csi.CreateSnapshotRequest{
@@ -214,27 +215,30 @@ func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.Volu
 
 	rsp, err := client.CreateSnapshot(ctx, &req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	snapDataName := GetSnapshotDataNameForSnapshot(snapshot)
-	volumeSnapshotRef, err := ref.GetReference(scheme.Scheme, snapshot)
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error getting snapshot reference: %v", err)
-	}
 
 	persistentVolumeRef, err := ref.GetReference(scheme.Scheme, volume)
 	if err != nil {
-		return nil, fmt.Errorf("unexpected error getting volume reference: %v", err)
+		return nil, nil, fmt.Errorf("unexpected error getting volume reference: %v", err)
 	}
 
-	// Create VolumeSnapshot in the database
+	// Create VolumeSnapshotData in the database
 	snapshotData := &crdv1.VolumeSnapshotData{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: snapDataName,
 		},
 		Spec: crdv1.VolumeSnapshotDataSpec{
-			VolumeSnapshotRef:   volumeSnapshotRef,
+                        VolumeSnapshotRef: &v1.ObjectReference{
+                                Kind: "VolumeSnapshot",
+				Namespace: snapshot.Namespace,
+                                Name: snapshot.Name,
+				UID: snapshot.UID,
+				APIVersion: "v1alpha1",
+				ResourceVersion: snapshot.ResourceVersion,
+                        },
 			PersistentVolumeRef: persistentVolumeRef,
 			VolumeSnapshotSource: crdv1.VolumeSnapshotSource{
 				CSI: &crdv1.CSIVolumeSnapshotSource{
@@ -244,14 +248,16 @@ func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.Volu
 				},
 			},
 		},
-		Status: crdv1.VolumeSnapshotStatus{
-			Conditions: []crdv1.VolumeSnapshotCondition{
-				ConvertSnapshotStatus(rsp.Snapshot.Status),
-			},
+	}
+
+	status := &crdv1.VolumeSnapshotStatus{
+		Conditions: []crdv1.VolumeSnapshotCondition{
+			ConvertSnapshotStatus(rsp.Snapshot.Status),
 		},
 	}
 
-	return snapshotData, nil
+	glog.V(5).Infof("CSI CreateSnapshot: %s snapshotData [%#v] status [%#v]", snapshot.Name, snapshotData, status)
+	return snapshotData, status, nil
 }
 
 func (c *csiConnection) DeleteSnapshot(ctx context.Context, snapshotID string) (err error) {

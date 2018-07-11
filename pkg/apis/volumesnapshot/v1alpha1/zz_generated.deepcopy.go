@@ -178,7 +178,6 @@ func (in *VolumeSnapshotData) DeepCopyInto(out *VolumeSnapshotData) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 
@@ -206,7 +205,6 @@ func (in *VolumeSnapshotDataCopy) DeepCopyInto(out *VolumeSnapshotDataCopy) {
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
 	in.Spec.DeepCopyInto(&out.Spec)
-	in.Status.DeepCopyInto(&out.Status)
 	return
 }
 

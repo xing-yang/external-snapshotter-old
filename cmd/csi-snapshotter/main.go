@@ -69,13 +69,14 @@ func main() {
                 ObjectMeta: metav1.ObjectMeta{
                         Namespace:"kk",
                         Name: "test",
-		        SelfLink:"/apis/csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
+		        SelfLink:"/apis/volumesnapshot.csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
 			UID:"046722da-6084-11e8-aa97-fa163ec505d6",
 			ResourceVersion:"514",
 			CreationTimestamp:metav1.Now(),
                 },
                 Spec: crdv1.VolumeSnapshotSpec{
                         PersistentVolumeClaimName: "testpvc",
+			SnapshotClassName: "testsnapclass",
                 },
         }
 
@@ -162,6 +163,8 @@ func main() {
 		glog.Error("CSI driver does not support ControllerCreateSnapshot")
 		os.Exit(1)
 	}
+
+	glog.V(2).Infof("Start NewCSISnapshotController with snapshotter %s", *snapshotter)
 
 	ctrl := controller.NewCSISnapshotController(
 		snapClient,

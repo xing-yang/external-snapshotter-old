@@ -64,7 +64,7 @@ func CreateCRD(clientset apiextensionsclient.Interface) error {
                 Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
                         Group:   crdv1.GroupName,
                         Version: crdv1.SchemeGroupVersion.Version,
-                        Scope:   apiextensionsv1beta1.NamespaceScoped,
+                        Scope:   apiextensionsv1beta1.ClusterScoped,
                         Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
                                 Plural: crdv1.SnapshotClassResourcePlural,
                                 Kind:   reflect.TypeOf(crdv1.SnapshotClass{}).Name(),

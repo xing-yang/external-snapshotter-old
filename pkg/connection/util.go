@@ -85,5 +85,5 @@ func ConvertSnapshotStatus(status *csi.SnapshotStatus) crdv1.VolumeSnapshotCondi
 // getSnapshotDataNameForSnapshot returns SnapshotData.Name for the create VolumeSnapshotData.
 // The name must be unique.
 func GetSnapshotDataNameForSnapshot(snapshot *crdv1.VolumeSnapshot) string {
-	return "pvc-" + string(snapshot.UID)
+	return "snapdata-" + string(snapshot.UID)
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/golang/glog"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"k8s.io/api/core/v1"
 	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
@@ -28,7 +29,7 @@ import (
 
 // Handler is responsible for handling VolumeAttachment events from informer.
 type Handler interface {
-	takeSnapshot(snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error)
+	takeSnapshot(snapshot *crdv1.VolumeSnapshot, volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, *crdv1.VolumeSnapshotStatus, error)
 	deleteSnapshot(vsd *crdv1.VolumeSnapshotData) error
 	listSnapshots(vsd *crdv1.VolumeSnapshotData) (*crdv1.VolumeSnapshotCondition, error)
 }
@@ -47,16 +48,18 @@ func NewCSIHandler(csiConnection connection.CSIConnection, timeout time.Duration
 }
 
 func (handler *csiHandler) takeSnapshot(snapshot *crdv1.VolumeSnapshot,
-	volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, error) {
+	volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, *crdv1.VolumeSnapshotStatus, error) {
+        glog.V(5).Infof("takeSnapshot: [%s]", snapshot.Name)
 	ctx, cancel := context.WithTimeout(context.Background(), handler.timeout)
 	defer cancel()
 
-	snapDataObj, err := handler.csiConnection.CreateSnapshot(ctx, snapshot, volume, parameters)
+	snapDataObj, status, err := handler.csiConnection.CreateSnapshot(ctx, snapshot, volume, parameters)
 	if err != nil {
-		return nil, fmt.Errorf("failed to take snapshot of the volume %s: %q", volume.Name, err)
+		return nil, nil, fmt.Errorf("failed to take snapshot of the volume %s: %q", volume.Name, err)
 	}
 
-	return snapDataObj, nil
+	glog.V(5).Infof("takeSnapshot: Created snapshot [%s]. Snapshot object [%#v] Status [%#v]", snapshot.Name, snapDataObj, status)
+	return snapDataObj, status, nil
 }
 
 func (handler *csiHandler) deleteSnapshot(vsd *crdv1.VolumeSnapshotData) error {
