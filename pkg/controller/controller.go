@@ -21,33 +21,33 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
+	storageinformers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions/volumesnapshot/v1alpha1"
+	storagelisters "github.com/kubernetes-csi/external-snapshotter/pkg/client/listers/volumesnapshot/v1alpha1"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"k8s.io/api/core/v1"
-        crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
-	storageinformers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions/volumesnapshot/v1alpha1"
-	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	storagelisters "github.com/kubernetes-csi/external-snapshotter/pkg/client/listers/volumesnapshot/v1alpha1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/kubernetes/pkg/util/goroutinemap"
 	"k8s.io/kubernetes/pkg/util/goroutinemap/exponentialbackoff"
-	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 var (
 	// Statuses of snapshot creation process
-	statusReady   string = "ready"
-	statusError   string = "error"
+	statusReady     string = "ready"
+	statusError     string = "error"
 	statusUploading string = "uploading"
-	statusNew     string = "new"
+	statusNew       string = "new"
 )
 
 type CSISnapshotController struct {
@@ -95,7 +95,7 @@ func NewCSISnapshotController(
 
 	ctrl := &CSISnapshotController{
 		clientset:                    clientset,
-                client:                       client,
+		client:                       client,
 		snapshotterName:              snapshotterName,
 		eventRecorder:                eventRecorder,
 		handler:                      NewCSIHandler(conn, timeout),
@@ -203,7 +203,7 @@ func (ctrl *CSISnapshotController) vsWorker() {
 		glog.V(5).Infof("vsWorker[%s]", key)
 
 		namespace, name, err := cache.SplitMetaNamespaceKey(key)
-                glog.V(5).Infof("vsWorker: snapshot namespace [%s] name [%s]", namespace, name)
+		glog.V(5).Infof("vsWorker: snapshot namespace [%s] name [%s]", namespace, name)
 		if err != nil {
 			glog.V(4).Infof("error getting namespace & name of snapshot %q to get snapshot from informer: %v", key, err)
 			return false
@@ -319,7 +319,7 @@ func (ctrl *CSISnapshotController) shouldProcessVS(snapshot *crdv1.VolumeSnapsho
 	if err != nil {
 		return false
 	}
-        glog.V(5).Infof("SnapshotClass Snapshotter [%s] Snapshot Controller snapshotterName [%s]", class.Snapshotter, ctrl.snapshotterName)
+	glog.V(5).Infof("SnapshotClass Snapshotter [%s] Snapshot Controller snapshotterName [%s]", class.Snapshotter, ctrl.snapshotterName)
 	if class.Snapshotter != ctrl.snapshotterName {
 		glog.V(4).Infof("Skipping VolumeSnapshot %s for snapshotter [%s] in SnapshotClass because it does not match with the snapshotter for controller [%s]", vsToVsKey(snapshot), class.Snapshotter, ctrl.snapshotterName)
 		return false
@@ -729,7 +729,7 @@ func (ctrl *CSISnapshotController) storeVSDUpdate(vsd interface{}) (bool, error)
 
 // createSnapshot starts new asynchronous operation to create snapshot data for snapshot
 func (ctrl *CSISnapshotController) createSnapshot(vs *crdv1.VolumeSnapshot) error {
-	glog.V(4).Infof("createSnapshot[%s]: started", vsToVsKey(vs), )
+	glog.V(4).Infof("createSnapshot[%s]: started", vsToVsKey(vs))
 	opName := fmt.Sprintf("create-%s[%s]", vsToVsKey(vs), string(vs.UID))
 	ctrl.scheduleOperation(opName, func() error {
 		ctrl.createSnapshotOperation(vs)
@@ -839,8 +839,8 @@ func (ctrl *CSISnapshotController) bindandUpdateVolumeSnapshot(snapshotData *crd
 		return nil, fmt.Errorf("error get snapshot %s from api server: %v", vsToVsKey(snapshot), err)
 	}
 
-        // Copy the snapshot object before updating it
-        snapshotCopy := snapshotObj.DeepCopy()
+	// Copy the snapshot object before updating it
+	snapshotCopy := snapshotObj.DeepCopy()
 	var updateSnapshot *crdv1.VolumeSnapshot
 	if snapshotObj.Spec.SnapshotDataName == snapshotData.Name {
 		glog.Infof("bindVolumeSnapshotDataToVolumeSnapshot: VolumeSnapshot %s already bind to volumeSnapshotData [%s]", snapshot.Name, snapshotData.Name)
@@ -896,10 +896,10 @@ func (ctrl *CSISnapshotController) getVolumeFromVolumeSnapshot(snapshot *crdv1.V
 // getClassFromVolumeSnapshot is a helper function to get storage class from VolumeSnapshot.
 func (ctrl *CSISnapshotController) getClassFromVolumeSnapshot(snapshot *crdv1.VolumeSnapshot) (*crdv1.SnapshotClass, error) {
 	className := snapshot.Spec.SnapshotClassName
-        glog.V(5).Infof("getClassFromVolumeSnapshot [%s]: SnapshotClassName [%s]", snapshot.Name, className)
+	glog.V(5).Infof("getClassFromVolumeSnapshot [%s]: SnapshotClassName [%s]", snapshot.Name, className)
 	class, err := ctrl.clientset.VolumesnapshotV1alpha1().SnapshotClasses().Get(className, metav1.GetOptions{})
 	if err != nil {
-                glog.Errorf("failed to retrieve storage class %s from the API server: %q", className, err)
+		glog.Errorf("failed to retrieve storage class %s from the API server: %q", className, err)
 
 		//return nil, fmt.Errorf("failed to retrieve storage class %s from the API server: %q", className, err)
 	}

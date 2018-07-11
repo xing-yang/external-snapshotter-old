@@ -18,19 +18,18 @@ package controller
 
 import (
 	"fmt"
-	"strings"
+	"github.com/golang/glog"
 	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"k8s.io/api/core/v1"
-	"github.com/golang/glog"
-	"strconv"
-	"k8s.io/client-go/tools/cache"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/tools/cache"
+	"strconv"
+	"strings"
 )
 
 var (
 	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
-
 
 // GetNameAndNameSpaceFromSnapshotName retrieves the namespace and
 // the short name of a snapshot from its full name
@@ -41,7 +40,6 @@ func GetNameAndNameSpaceFromSnapshotName(name string) (string, string, error) {
 	}
 	return strs[0], strs[1], nil
 }
-
 
 func vsToVsKey(vs *crdv1.VolumeSnapshot) string {
 	return fmt.Sprintf("%s/%s", vs.Namespace, vs.Name)

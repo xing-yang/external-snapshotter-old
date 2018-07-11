@@ -22,9 +22,9 @@ import (
 	"time"
 
 	"github.com/golang/glog"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"k8s.io/api/core/v1"
-	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 )
 
 // Handler is responsible for handling VolumeAttachment events from informer.
@@ -49,7 +49,7 @@ func NewCSIHandler(csiConnection connection.CSIConnection, timeout time.Duration
 
 func (handler *csiHandler) takeSnapshot(snapshot *crdv1.VolumeSnapshot,
 	volume *v1.PersistentVolume, parameters map[string]string) (*crdv1.VolumeSnapshotData, *crdv1.VolumeSnapshotStatus, error) {
-        glog.V(5).Infof("takeSnapshot: [%s]", snapshot.Name)
+	glog.V(5).Infof("takeSnapshot: [%s]", snapshot.Name)
 	ctx, cancel := context.WithTimeout(context.Background(), handler.timeout)
 	defer cancel()
 

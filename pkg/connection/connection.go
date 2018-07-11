@@ -25,15 +25,15 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	"github.com/golang/glog"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/status"
-        crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/api/core/v1"
-	ref "k8s.io/client-go/tools/reference"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	ref "k8s.io/client-go/tools/reference"
 )
 
 // CSIConnection is gRPC connection to a remote CSI driver and abstracts all
@@ -231,14 +231,14 @@ func (c *csiConnection) CreateSnapshot(ctx context.Context, snapshot *crdv1.Volu
 			Name: snapDataName,
 		},
 		Spec: crdv1.VolumeSnapshotDataSpec{
-                        VolumeSnapshotRef: &v1.ObjectReference{
-                                Kind: "VolumeSnapshot",
-				Namespace: snapshot.Namespace,
-                                Name: snapshot.Name,
-				UID: snapshot.UID,
-				APIVersion: "v1alpha1",
+			VolumeSnapshotRef: &v1.ObjectReference{
+				Kind:            "VolumeSnapshot",
+				Namespace:       snapshot.Namespace,
+				Name:            snapshot.Name,
+				UID:             snapshot.UID,
+				APIVersion:      "v1alpha1",
 				ResourceVersion: snapshot.ResourceVersion,
-                        },
+			},
 			PersistentVolumeRef: persistentVolumeRef,
 			VolumeSnapshotSource: crdv1.VolumeSnapshotSource{
 				CSI: &crdv1.CSIVolumeSnapshotSource{
@@ -324,7 +324,7 @@ func isFinalError(err error) bool {
 		return true
 	}
 	switch st.Code() {
-	case codes.Canceled,          // gRPC: Client Application cancelled the request
+	case codes.Canceled, // gRPC: Client Application cancelled the request
 		codes.DeadlineExceeded,   // gRPC: Timeout
 		codes.Unavailable,        // gRPC: Server shutting down, TCP connection broken - previous Attach() or Detach() may be still in progress.
 		codes.ResourceExhausted,  // gRPC: Server temporarily out of resources - previous Attach() or Detach() may be still in progress.

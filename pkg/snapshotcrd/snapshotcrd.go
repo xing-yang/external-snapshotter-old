@@ -57,26 +57,26 @@ func NewClient(cfg *rest.Config) (*rest.RESTClient, *runtime.Scheme, error) {
 
 // CreateCRD creates CustomResourceDefinition
 func CreateCRD(clientset apiextensionsclient.Interface) error {
-        crd := &apiextensionsv1beta1.CustomResourceDefinition{
-                ObjectMeta: metav1.ObjectMeta{
-                        Name: crdv1.SnapshotClassResourcePlural + "." + crdv1.GroupName,
-                },
-                Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-                        Group:   crdv1.GroupName,
-                        Version: crdv1.SchemeGroupVersion.Version,
-                        Scope:   apiextensionsv1beta1.ClusterScoped,
-                        Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-                                Plural: crdv1.SnapshotClassResourcePlural,
-                                Kind:   reflect.TypeOf(crdv1.SnapshotClass{}).Name(),
-                        },
-                },
-        }
-        res, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
+	crd := &apiextensionsv1beta1.CustomResourceDefinition{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: crdv1.SnapshotClassResourcePlural + "." + crdv1.GroupName,
+		},
+		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
+			Group:   crdv1.GroupName,
+			Version: crdv1.SchemeGroupVersion.Version,
+			Scope:   apiextensionsv1beta1.ClusterScoped,
+			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
+				Plural: crdv1.SnapshotClassResourcePlural,
+				Kind:   reflect.TypeOf(crdv1.SnapshotClass{}).Name(),
+			},
+		},
+	}
+	res, err := clientset.ApiextensionsV1beta1().CustomResourceDefinitions().Create(crd)
 
-        if err != nil && !apierrors.IsAlreadyExists(err) {
-                glog.Fatalf("failed to create VolumeSnapshotResource: %#v, err: %#v",
-                        res, err)
-        }
+	if err != nil && !apierrors.IsAlreadyExists(err) {
+		glog.Fatalf("failed to create VolumeSnapshotResource: %#v, err: %#v",
+			res, err)
+	}
 
 	crd = &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{

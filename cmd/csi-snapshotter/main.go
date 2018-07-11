@@ -20,25 +20,25 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 	"os"
 	"os/signal"
 	"time"
-        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-        "k8s.io/client-go/tools/cache"
 
 	"github.com/golang/glog"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/controller"
+	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-        crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
-        clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
 	informers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 )
 
 const (
@@ -65,29 +65,28 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-        vs := &crdv1.VolumeSnapshot{
-                ObjectMeta: metav1.ObjectMeta{
-                        Namespace:"kk",
-                        Name: "test",
-		        SelfLink:"/apis/volumesnapshot.csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
-			UID:"046722da-6084-11e8-aa97-fa163ec505d6",
-			ResourceVersion:"514",
-			CreationTimestamp:metav1.Now(),
-                },
-                Spec: crdv1.VolumeSnapshotSpec{
-                        PersistentVolumeClaimName: "testpvc",
-			SnapshotClassName: "testsnapclass",
-                },
-        }
+	vs := &crdv1.VolumeSnapshot{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "kk",
+			Name:              "test",
+			SelfLink:          "/apis/volumesnapshot.csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
+			UID:               "046722da-6084-11e8-aa97-fa163ec505d6",
+			ResourceVersion:   "514",
+			CreationTimestamp: metav1.Now(),
+		},
+		Spec: crdv1.VolumeSnapshotSpec{
+			PersistentVolumeClaimName: "testpvc",
+			SnapshotClassName:         "testsnapclass",
+		},
+	}
 
-        key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(vs)
-        if err != nil {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(vs)
+	if err != nil {
 		glog.Error(err.Error())
-        }
+	}
 
-        glog.Info(key)
-        glog.Info(vs)
-
+	glog.Info(key)
+	glog.Info(vs)
 
 	// Create the client config. Use kubeconfig if given, otherwise assume in-cluster.
 	config, err := buildConfig(*kubeconfig)
@@ -102,39 +101,37 @@ func main() {
 		os.Exit(1)
 	}
 
-        snapClient, err := clientset.NewForConfig(config)
-        if err != nil {
-                glog.Errorf("Error building snapshot clientset: %s", err.Error())
+	snapClient, err := clientset.NewForConfig(config)
+	if err != nil {
+		glog.Errorf("Error building snapshot clientset: %s", err.Error())
 		os.Exit(1)
-        }
+	}
 
 	factory := informers.NewSharedInformerFactory(snapClient, *resync)
 
 	// Create CRD resource
-	//===============================================================
-        aeclientset, err := apiextensionsclient.NewForConfig(config)
-        if err != nil {
-                panic(err)
-        }
+	aeclientset, err := apiextensionsclient.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
 
-        // initialize CRD resource if it does not exist
-        err = snapshotcrd.CreateCRD(aeclientset)
-        if err != nil {
-                panic(err)
-        }
+	// initialize CRD resource if it does not exist
+	err = snapshotcrd.CreateCRD(aeclientset)
+	if err != nil {
+		panic(err)
+	}
 
-        // make a new config for our extension's API group, using the first config as a baseline
-        crdClient, _, err := snapshotcrd.NewClient(config)
-        if err != nil {
-                panic(err)
-        }
+	// make a new config for our extension's API group, using the first config as a baseline
+	crdClient, _, err := snapshotcrd.NewClient(config)
+	if err != nil {
+		panic(err)
+	}
 
-        // wait until CRD gets processed
-        err = snapshotcrd.WaitForSnapshotResource(crdClient)
-        if err != nil {
-                panic(err)
-        }
-	//===============================================================
+	// wait until CRD gets processed
+	err = snapshotcrd.WaitForSnapshotResource(crdClient)
+	if err != nil {
+		panic(err)
+	}
 
 	// Connect to CSI.
 	csiConn, err := connection.New(*csiAddress, *connectionTimeout)
@@ -170,7 +167,7 @@ func main() {
 		snapClient,
 		kubeClient,
 		*snapshotter,
-                factory.Volumesnapshot().V1alpha1().VolumeSnapshots(),
+		factory.Volumesnapshot().V1alpha1().VolumeSnapshots(),
 		factory.Volumesnapshot().V1alpha1().VolumeSnapshotDatas(),
 		*createSnapshotDataRetryCount,
 		*createSnapshotDataInterval,
