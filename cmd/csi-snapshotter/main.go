@@ -33,7 +33,6 @@ import (
 
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/controller"
-	"github.com/kubernetes-csi/external-snapshotter/pkg/snapshotcrd"
 
 	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
@@ -116,19 +115,19 @@ func main() {
 	}
 
 	// initialize CRD resource if it does not exist
-	err = snapshotcrd.CreateCRD(aeclientset)
+	err = CreateCRD(aeclientset)
 	if err != nil {
 		panic(err)
 	}
 
 	// make a new config for our extension's API group, using the first config as a baseline
-	crdClient, _, err := snapshotcrd.NewClient(config)
+	crdClient, _, err := NewClient(config)
 	if err != nil {
 		panic(err)
 	}
 
 	// wait until CRD gets processed
-	err = snapshotcrd.WaitForSnapshotResource(crdClient)
+	err = WaitForSnapshotResource(crdClient)
 	if err != nil {
 		panic(err)
 	}
