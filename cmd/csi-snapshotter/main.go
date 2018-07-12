@@ -1,5 +1,5 @@
 /*
-Copyright 2017 The Kubernetes Authors.
+Copyright 2018 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,21 +20,24 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
 	"os"
 	"os/signal"
 	"time"
-	 storage "k8s.io/api/storage/v1alpha1"
-        metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-        "k8s.io/client-go/tools/cache"
 
 	"github.com/golang/glog"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/kubernetes-csi/external-snapshotter/pkg/connection"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/controller"
+
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	clientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"
+	informers "github.com/kubernetes-csi/external-snapshotter/pkg/client/informers/externalversions"
+	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 )
 
 const (
@@ -61,28 +64,28 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Parse()
 
-         vs := &storage.VolumeSnapshot{
-                ObjectMeta: metav1.ObjectMeta{
-                        Namespace:"kk",
-                        Name: "test",
-		        SelfLink:"/apis/storage.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
-			UID:"046722da-6084-11e8-aa97-fa163ec505d6",
-			ResourceVersion:"514",
-			CreationTimestamp:metav1.Now(),
-                },
-                Spec: storage.VolumeSnapshotSpec{
-                        PersistentVolumeClaimName: "testpvc",
-                },
-        }
+	vs := &crdv1.VolumeSnapshot{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:         "kk",
+			Name:              "test",
+			SelfLink:          "/apis/volumesnapshot.csi.k8s.io/v1alpha1/namespaces/default/volumesnapshots/snapshot-demo",
+			UID:               "046722da-6084-11e8-aa97-fa163ec505d6",
+			ResourceVersion:   "514",
+			CreationTimestamp: metav1.Now(),
+		},
+		Spec: crdv1.VolumeSnapshotSpec{
+			PersistentVolumeClaimName: "testpvc",
+			SnapshotClassName:         "testsnapclass",
+		},
+	}
 
-        key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(vs)
-        if err != nil {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(vs)
+	if err != nil {
 		glog.Error(err.Error())
-        }
+	}
 
-        glog.Info(key)
-        glog.Info(vs)
-
+	glog.Info(key)
+	glog.Info(vs)
 
 	// Create the client config. Use kubeconfig if given, otherwise assume in-cluster.
 	config, err := buildConfig(*kubeconfig)
@@ -91,12 +94,43 @@ func main() {
 		os.Exit(1)
 	}
 
-	clientset, err := kubernetes.NewForConfig(config)
+	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		glog.Error(err.Error())
 		os.Exit(1)
 	}
-	factory := informers.NewSharedInformerFactory(clientset, *resync)
+
+	snapClient, err := clientset.NewForConfig(config)
+	if err != nil {
+		glog.Errorf("Error building snapshot clientset: %s", err.Error())
+		os.Exit(1)
+	}
+
+	factory := informers.NewSharedInformerFactory(snapClient, *resync)
+
+	// Create CRD resource
+	aeclientset, err := apiextensionsclient.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
+
+	// initialize CRD resource if it does not exist
+	err = CreateCRD(aeclientset)
+	if err != nil {
+		panic(err)
+	}
+
+	// make a new config for our extension's API group, using the first config as a baseline
+	crdClient, _, err := NewClient(config)
+	if err != nil {
+		panic(err)
+	}
+
+	// wait until CRD gets processed
+	err = WaitForSnapshotResource(crdClient)
+	if err != nil {
+		panic(err)
+	}
 
 	// Connect to CSI.
 	csiConn, err := connection.New(*csiAddress, *connectionTimeout)
@@ -126,11 +160,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	glog.V(2).Infof("Start NewCSISnapshotController with snapshotter %s", *snapshotter)
+
 	ctrl := controller.NewCSISnapshotController(
-		clientset,
+		snapClient,
+		kubeClient,
 		*snapshotter,
-		factory.Storage().V1alpha1().VolumeSnapshots(),
-		factory.Storage().V1alpha1().VolumeSnapshotDatas(),
+		factory.Volumesnapshot().V1alpha1().VolumeSnapshots(),
+		factory.Volumesnapshot().V1alpha1().VolumeSnapshotDatas(),
 		*createSnapshotDataRetryCount,
 		*createSnapshotDataInterval,
 		csiConn,

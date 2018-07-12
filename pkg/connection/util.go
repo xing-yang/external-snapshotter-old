@@ -17,62 +17,41 @@ limitations under the License.
 package connection
 
 import (
-	"regexp"
-
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"k8s.io/api/core/v1"
-	storage "k8s.io/api/storage/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var (
-	snapshotDataNamePrefix = "k8s-volume-snapshot"
-)
-
-func SanitizeDriverName(driver string) string {
-	re := regexp.MustCompile("[^a-zA-Z0-9-]")
-	name := re.ReplaceAllString(driver, "-")
-	if name[len(name)-1] == '-' {
-		// name must not end with '-'
-		name = name + "X"
-	}
-	return name
-}
-
-// getFinalizerName returns Snapshotter name suitable to be used as finalizer
-func GetFinalizerName(driver string) string {
-	return "external-snapshotter/" + SanitizeDriverName(driver)
-}
-
-// ConvertSnapshotStatus converts snapshot status to storage.VolumeSnapshotDataCondition
-func ConvertSnapshotStatus(status *csi.SnapshotStatus) storage.VolumeSnapshotDataCondition {
-	var snapDataCondition storage.VolumeSnapshotDataCondition
+// ConvertSnapshotStatus converts snapshot status to crdv1.VolumeSnapshotCondition
+func ConvertSnapshotStatus(status *csi.SnapshotStatus) crdv1.VolumeSnapshotCondition {
+	var snapDataCondition crdv1.VolumeSnapshotCondition
 
 	switch status.Type {
 	case csi.SnapshotStatus_READY:
-		snapDataCondition = storage.VolumeSnapshotDataCondition{
-			Type:               storage.VolumeSnapshotDataConditionReady,
+		snapDataCondition = crdv1.VolumeSnapshotCondition{
+			Type:               crdv1.VolumeSnapshotConditionReady,
 			Status:             v1.ConditionTrue,
 			Message:            status.Details,
 			LastTransitionTime: metav1.Now(),
 		}
 	case csi.SnapshotStatus_ERROR_UPLOADING:
-		snapDataCondition = storage.VolumeSnapshotDataCondition{
-			Type:               storage.VolumeSnapshotDataConditionError,
+		snapDataCondition = crdv1.VolumeSnapshotCondition{
+			Type:               crdv1.VolumeSnapshotConditionError,
 			Status:             v1.ConditionTrue,
 			Message:            status.Details,
 			LastTransitionTime: metav1.Now(),
 		}
 	case csi.SnapshotStatus_UPLOADING:
-		snapDataCondition = storage.VolumeSnapshotDataCondition{
-			Type:               storage.VolumeSnapshotDataConditionPending,
+		snapDataCondition = crdv1.VolumeSnapshotCondition{
+			Type:               crdv1.VolumeSnapshotConditionUploading,
 			Status:             v1.ConditionTrue,
 			Message:            status.Details,
 			LastTransitionTime: metav1.Now(),
 		}
 	case csi.SnapshotStatus_UNKNOWN:
-		snapDataCondition = storage.VolumeSnapshotDataCondition{
-			Type:               storage.VolumeSnapshotDataConditionPending,
+		snapDataCondition = crdv1.VolumeSnapshotCondition{
+			Type:               crdv1.VolumeSnapshotConditionCreating,
 			Status:             v1.ConditionUnknown,
 			Message:            status.Details,
 			LastTransitionTime: metav1.Now(),
@@ -84,6 +63,6 @@ func ConvertSnapshotStatus(status *csi.SnapshotStatus) storage.VolumeSnapshotDat
 
 // getSnapshotDataNameForSnapshot returns SnapshotData.Name for the create VolumeSnapshotData.
 // The name must be unique.
-func GetSnapshotDataNameForSnapshot(snapshot *storage.VolumeSnapshot) string {
-	return "pvc-" + string(snapshot.UID)
+func GetSnapshotDataNameForSnapshot(snapshot *crdv1.VolumeSnapshot) string {
+	return "snapdata-" + string(snapshot.UID)
 }

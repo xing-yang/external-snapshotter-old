@@ -30,7 +30,4 @@ func DropDisabledAlphaFields(class *storage.StorageClass) {
 	if !utilfeature.DefaultFeatureGate.Enabled(features.DynamicProvisioningScheduling) {
 		class.AllowedTopologies = nil
 	}
-	if !utilfeature.DefaultFeatureGate.Enabled(features.VolumeSnapshot) {
-		class.SnapshotParameters = nil
-	}
 }

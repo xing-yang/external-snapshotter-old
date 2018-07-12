@@ -135,7 +135,6 @@ filegroup(
         "//pkg/controller/volume/persistentvolume:all-srcs",
         "//pkg/controller/volume/pvcprotection:all-srcs",
         "//pkg/controller/volume/pvprotection:all-srcs",
-        "//pkg/controller/volume/snapshot:all-srcs",
     ],
     tags = ["automanaged"],
 )

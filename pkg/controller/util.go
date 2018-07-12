@@ -18,19 +18,18 @@ package controller
 
 import (
 	"fmt"
-	"strings"
-	storage "k8s.io/api/storage/v1alpha1"
-	"k8s.io/api/core/v1"
 	"github.com/golang/glog"
-	"strconv"
-	"k8s.io/client-go/tools/cache"
+	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/tools/cache"
+	"strconv"
+	"strings"
 )
 
 var (
 	keyFunc = cache.DeletionHandlingMetaNamespaceKeyFunc
 )
-
 
 // GetNameAndNameSpaceFromSnapshotName retrieves the namespace and
 // the short name of a snapshot from its full name
@@ -42,8 +41,7 @@ func GetNameAndNameSpaceFromSnapshotName(name string) (string, string, error) {
 	return strs[0], strs[1], nil
 }
 
-
-func vsToVsKey(vs *storage.VolumeSnapshot) string {
+func vsToVsKey(vs *crdv1.VolumeSnapshot) string {
 	return fmt.Sprintf("%s/%s", vs.Namespace, vs.Name)
 }
 
@@ -107,15 +105,15 @@ func storeObjectUpdate(store cache.Store, obj interface{}, className string) (bo
 	return true, nil
 }
 
-func GenSnapshotStatus(snapshotDataCon *storage.VolumeSnapshotDataCondition) *storage.VolumeSnapshotCondition {
-	if snapshotDataCon == nil {
+func GenSnapshotStatus(snapshotCon *crdv1.VolumeSnapshotCondition) *crdv1.VolumeSnapshotCondition {
+	if snapshotCon == nil {
 		return nil
 	}
-	return &storage.VolumeSnapshotCondition{
-		Type:               (storage.VolumeSnapshotConditionType)(snapshotDataCon.Type),
-		Status:             snapshotDataCon.Status,
-		Message:            snapshotDataCon.Message,
-		LastTransitionTime: snapshotDataCon.LastTransitionTime,
-		Reason:             snapshotDataCon.Reason,
+	return &crdv1.VolumeSnapshotCondition{
+		Type:               (crdv1.VolumeSnapshotConditionType)(snapshotCon.Type),
+		Status:             snapshotCon.Status,
+		Message:            snapshotCon.Message,
+		LastTransitionTime: snapshotCon.LastTransitionTime,
+		Reason:             snapshotCon.Reason,
 	}
 }
