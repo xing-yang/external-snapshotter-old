@@ -31,7 +31,7 @@ import (
 
 const (
 	// SnapshotPVCAnnotation is "snapshot.alpha.kubernetes.io/snapshot"
-	SnapshotPVCAnnotation = "snapshot.alpha.kubernetes.io/snapshot"
+	SnapshotPVCAnnotation = "volumesnapshot.csi.k8s.io/snapshot"
 )
 
 // NewClient creates a new RESTClient

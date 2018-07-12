@@ -17,32 +17,11 @@ limitations under the License.
 package connection
 
 import (
-	"regexp"
-
 	"github.com/container-storage-interface/spec/lib/go/csi/v0"
 	crdv1 "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var (
-	snapshotDataNamePrefix = "k8s-volume-snapshot"
-)
-
-func SanitizeDriverName(driver string) string {
-	re := regexp.MustCompile("[^a-zA-Z0-9-]")
-	name := re.ReplaceAllString(driver, "-")
-	if name[len(name)-1] == '-' {
-		// name must not end with '-'
-		name = name + "X"
-	}
-	return name
-}
-
-// getFinalizerName returns Snapshotter name suitable to be used as finalizer
-func GetFinalizerName(driver string) string {
-	return "external-snapshotter/" + SanitizeDriverName(driver)
-}
 
 // ConvertSnapshotStatus converts snapshot status to crdv1.VolumeSnapshotCondition
 func ConvertSnapshotStatus(status *csi.SnapshotStatus) crdv1.VolumeSnapshotCondition {
